@@ -216,6 +216,35 @@ public class KeyboardView extends View {
         final String layoutName = keyboard.mId == null ? null : keyboard.mId.mKeyboardLayoutSetName;
         mHexMode = layoutName != null && layoutName.startsWith("hex")
                 && keyboard.mId.isAlphabetKeyboard() && !(keyboard instanceof MoreKeysKeyboard);
+        mHexOverhang = 0.0f;
+        mHexScale = 1.0f;
+        mHexMinTop = 0;
+        if (mHexMode) {
+            // The top and bottom points of a hexagon reach past its row. Squeeze the rows together
+            // just enough that the points of the first and last row stay inside the keyboard.
+            final float common = Math.max(1, keyboard.mMostCommonKeyWidth);
+            int minTop = Integer.MAX_VALUE;
+            int maxBottom = Integer.MIN_VALUE;
+            float unit = 0.0f;
+            for (final Key k : keyboard.getSortedKeys()) {
+                if (k.isSpacer()) continue;
+                minTop = Math.min(minTop, k.getY());
+                maxBottom = Math.max(maxBottom, k.getY() + k.getHeight() + k.getVerticalGap());
+                final float cellW = k.getWidth() + k.getHorizontalGap();
+                if (unit == 0.0f && Math.round(cellW / common) <= 1) unit = cellW;
+            }
+            if (unit == 0.0f) unit = common;
+            final float span = maxBottom - minTop;
+            // Vertical reach of the slanted edges for 120 degree corners: unit / (4 * sqrt(3)).
+            final float overhang = unit * 0.1443f;
+            if (span > 4.0f * overhang) {
+                mHexOverhang = overhang;
+                mHexMinTop = minTop;
+                mHexScale = (span - 2.0f * overhang) / span;
+            } else {
+                mHexMode = false;
+            }
+        }
         final int keyHeight = keyboard.mMostCommonKeyHeight - keyboard.mVerticalGap;
         final int keyWidth = keyboard.mMostCommonKeyWidth;
 
@@ -421,7 +450,10 @@ public class KeyboardView extends View {
         if(Color.alpha(kdc.getTextColor()) > 0) {
             // Hexboard modification: the hexagon is centred on the key's whole cell (key plus the
             // gap below it), so move the label down to the same centre.
-            final float hexLabelShift = mHexMode ? key.getVerticalGap() / 2.0f : 0.0f;
+            final float hexLabelShift = mHexMode
+                    ? hexMapY(key.getY() + (key.getHeight() + key.getVerticalGap()) / 2.0f)
+                            - (key.getY() + key.getHeight() / 2.0f)
+                    : 0.0f;
             canvas.translate(0.0f, hexLabelShift);
             onDrawKeyTopVisuals(key, canvas, paint, params, kdc, drawOffsetAndSize.right, drawOffsetAndSize.bottom);
             canvas.translate(0.0f, -hexLabelShift);
@@ -432,6 +464,14 @@ public class KeyboardView extends View {
 
     // Hexboard modification: hexagonal key backgrounds.
     private boolean mHexMode = false;
+    private float mHexOverhang = 0.0f;
+    private float mHexScale = 1.0f;
+    private int mHexMinTop = 0;
+
+    /** Where a keyboard y coordinate lands once the rows are squeezed to fit the hexagon points. */
+    private float hexMapY(final float y) {
+        return mHexMinTop + mHexOverhang + (y - mHexMinTop) * mHexScale;
+    }
     private final Path mHexPath = new Path();
     private final Paint mHexPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
 
@@ -444,14 +484,13 @@ public class KeyboardView extends View {
             @Nonnull final Drawable background) {
         final float density = getResources().getDisplayMetrics().density;
         final float cellW = key.getWidth() + key.getHorizontalGap();
-        final float cellH = key.getHeight() + key.getVerticalGap();
+        final float cellH = (key.getHeight() + key.getVerticalGap()) * mHexScale;
         final float left = key.getX() + getPaddingLeft();
-        final float top = key.getY() + getPaddingTop();
+        final float top = hexMapY(key.getY()) + getPaddingTop();
         final float common = Math.max(1, mKeyboard.mMostCommonKeyWidth);
         final int cells = Math.max(1, Math.round(cellW / common));
         final float unit = cellW / cells;
-        // Vertical reach of the slanted edges for 120 degree corners: unit / (4 * sqrt(3)).
-        final float o = unit * 0.1443f;
+        final float o = mHexOverhang;
         final float inset = Math.max(1.0f, density * 1.25f);
         final float w = unit / 2.0f - inset;
         final float yTopTip = top - o + inset * 1.15f;
