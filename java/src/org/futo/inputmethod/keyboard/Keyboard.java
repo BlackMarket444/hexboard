@@ -76,6 +76,9 @@ public class Keyboard {
     public final int mMostCommonKeyHeight;
     public final int mMostCommonKeyWidth;
 
+    /** Hexboard modification: width of one hexagonal grid cell in pixels, or 0 for a normal keyboard. */
+    public final float mHexUnit;
+
     /** More keys keyboard template */
     public final int mMoreKeysTemplate;
 
@@ -112,6 +115,7 @@ public class Keyboard {
         mBaseWidth = params.mBaseWidth;
         mMostCommonKeyHeight = params.mMostCommonKeyHeight;
         mMostCommonKeyWidth = params.mMostCommonKeyWidth;
+        mHexUnit = params.mHexUnit;
         mMoreKeysTemplate = params.mMoreKeysTemplate;
         mMaxMoreKeysKeyboardColumn = params.mMaxMoreKeysKeyboardColumn;
         mKeyVisualAttributes = params.mKeyVisualAttributes;
@@ -141,6 +145,7 @@ public class Keyboard {
         mBaseWidth = keyboard.mBaseWidth;
         mMostCommonKeyHeight = keyboard.mMostCommonKeyHeight;
         mMostCommonKeyWidth = keyboard.mMostCommonKeyWidth;
+        mHexUnit = keyboard.mHexUnit;
         mMoreKeysTemplate = keyboard.mMoreKeysTemplate;
         mMaxMoreKeysKeyboardColumn = keyboard.mMaxMoreKeysKeyboardColumn;
         mKeyVisualAttributes = keyboard.mKeyVisualAttributes;

@@ -68,6 +68,7 @@ import org.futo.inputmethod.latin.uix.DynamicThemeProvider
 import org.futo.inputmethod.latin.uix.DynamicThemeProviderOwner
 import org.futo.inputmethod.latin.uix.EmojiTracker.useEmoji
 import org.futo.inputmethod.latin.uix.HiddenKeysSetting
+import org.futo.inputmethod.keyboard.HexKeysSetting
 import org.futo.inputmethod.latin.uix.KeyBordersSetting
 import org.futo.inputmethod.latin.uix.KeyHintsSetting
 import org.futo.inputmethod.latin.uix.KeyboardColorScheme
@@ -420,6 +421,13 @@ class LatinIME : InputMethodServiceCompose(), LatinIMELegacy.SuggestionStripCont
 
                 updateDrawableProvider(activeColorScheme.value)
                 invalidateKeyboard()
+            }
+        }
+
+        // Hexboard modification: rebuild the keyboard when hexagonal keys are switched on or off.
+        launchJob {
+            getSettingFlow(HexKeysSetting).collect {
+                invalidateKeyboard(true)
             }
         }
 

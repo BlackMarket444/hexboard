@@ -1,21 +1,6 @@
-name: Hex QWERTY 6 moved
-description: QWERTY with E, A and O moved to the middle of the home row. Hexagonal keys.
-numberRowMode: AlwaysDisabled
-rowHeightMode: FillHeight
-bottomRowHeightMode: Flexible
-bottomRowWidthMode: Identical
-supportsSplit: false
-minimumFunctionalKeyWidth: 0.1
-minimumBottomRowFunctionalKeyWidth: 0.1
-overrideWidths: { Custom1: 0.1, Custom2: 0.4 }
+name: QWERTY 6 moved
+description: QWERTY with E, A and O moved to the middle of the home row.
 rows:
   - letters: "q w g r t y u i f p"
   - letters: "j s d e a h o k l"
-  - letters: "$shift z x c v b n m & $delete"
-  - bottom:
-      - { type: symbols, attributes: { width: Custom1 } }
-      - { type: contextual, attributes: { width: Custom1 }, fallbackKey: { type: base, spec: ",", attributes: { width: Custom1 } } }
-      - { type: action, attributes: { width: Custom1 }, fallbackKey: { type: gap, attributes: { width: Custom1 } } }
-      - { type: space, attributes: { width: Custom2 } }
-      - { type: base, spec: ".", attributes: { width: Custom1 } }
-      - { type: enter, attributes: { width: Custom1 } }
+  - letters: "z x c v b n m"

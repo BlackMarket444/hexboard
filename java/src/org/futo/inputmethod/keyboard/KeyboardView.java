@@ -211,30 +211,23 @@ public class KeyboardView extends View {
      */
     public void setKeyboard(@Nonnull final Keyboard keyboard) {
         mKeyboard = keyboard;
-        // Hexboard modification: hex layouts (see HexLayouts) stagger every row by half a key,
-        // so their keys can be drawn as interlocking hexagons.
-        final String layoutName = keyboard.mId == null ? null : keyboard.mId.mKeyboardLayoutSetName;
-        mHexMode = layoutName != null && keyboard.mId.isAlphabetKeyboard()
-                && !(keyboard instanceof MoreKeysKeyboard)
-                && HexLayouts.isHexLayout(getContext(), layoutName);
+        // Hexboard modification: the layout engine has already placed these keys on a hexagonal
+        // grid (every row offset by half a cell from its neighbours), so draw them as hexagons.
+        mHexMode = keyboard.mHexUnit > 0.0f && !(keyboard instanceof MoreKeysKeyboard);
         mHexOverhang = 0.0f;
         mHexScale = 1.0f;
         mHexMinTop = 0;
         if (mHexMode) {
             // The top and bottom points of a hexagon reach past its row. Squeeze the rows together
             // just enough that the points of the first and last row stay inside the keyboard.
-            final float common = Math.max(1, keyboard.mMostCommonKeyWidth);
             int minTop = Integer.MAX_VALUE;
             int maxBottom = Integer.MIN_VALUE;
-            float unit = 0.0f;
+            final float unit = keyboard.mHexUnit;
             for (final Key k : keyboard.getSortedKeys()) {
                 if (k.isSpacer()) continue;
                 minTop = Math.min(minTop, k.getY());
                 maxBottom = Math.max(maxBottom, k.getY() + k.getHeight() + k.getVerticalGap());
-                final float cellW = k.getWidth() + k.getHorizontalGap();
-                if (unit == 0.0f && Math.round(cellW / common) <= 1) unit = cellW;
             }
-            if (unit == 0.0f) unit = common;
             final float span = maxBottom - minTop;
             // Vertical reach of the slanted edges for 120 degree corners: unit / (4 * sqrt(3)).
             final float overhang = unit * 0.1443f;
@@ -488,8 +481,7 @@ public class KeyboardView extends View {
         final float cellH = (key.getHeight() + key.getVerticalGap()) * mHexScale;
         final float left = key.getX() + getPaddingLeft();
         final float top = hexMapY(key.getY()) + getPaddingTop();
-        final float common = Math.max(1, mKeyboard.mMostCommonKeyWidth);
-        final int cells = Math.max(1, Math.round(cellW / common));
+        final int cells = Math.max(1, Math.round(cellW / mKeyboard.mHexUnit));
         final float unit = cellW / cells;
         final float o = mHexOverhang;
         final float inset = Math.max(1.0f, density * 1.25f);

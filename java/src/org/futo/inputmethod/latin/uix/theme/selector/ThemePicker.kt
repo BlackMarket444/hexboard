@@ -51,6 +51,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.futo.inputmethod.latin.R
+import org.futo.inputmethod.keyboard.HexKeysSetting
 import org.futo.inputmethod.latin.uix.KeyBordersSetting
 import org.futo.inputmethod.latin.uix.KeyboardBackground
 import org.futo.inputmethod.latin.uix.KeyboardColorScheme
@@ -408,6 +409,16 @@ fun ThemePicker(onDeleteCustomTheme: (String) -> Unit, onCustomTheme: () -> Unit
 
 
                 item(span = { GridItemSpan(maxCurrentLineSpan) }) { }
+
+                // Hexboard modification: switch between hexagonal and normal keys.
+                item(span = { GridItemSpan(maxCurrentLineSpan) }) {
+                    CompositionLocalProvider(LocalLayoutDirection provides originalDirection) {
+                        SettingToggleDataStore(
+                            title = "Hexagonal keys",
+                            setting = HexKeysSetting
+                        )
+                    }
+                }
 
                 item(span = { GridItemSpan(maxCurrentLineSpan) }) {
                     if(ZipThemes.ThemeFileName.fromSetting(currentTheme) == null) {

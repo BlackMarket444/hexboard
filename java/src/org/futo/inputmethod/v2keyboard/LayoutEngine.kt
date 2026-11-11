@@ -4,13 +4,17 @@ import android.content.Context
 import android.graphics.Rect
 import android.util.Log
 import androidx.compose.ui.unit.Dp
+import org.futo.inputmethod.keyboard.HexKeysSetting
 import org.futo.inputmethod.keyboard.KeyConsts
+import org.futo.inputmethod.keyboard.internal.KeyboardLayoutKind
+import org.futo.inputmethod.latin.uix.getSettingBlocking
 import org.futo.inputmethod.keyboard.internal.KeyboardLayoutElement
 import org.futo.inputmethod.keyboard.internal.KeyboardParams
 import org.futo.inputmethod.latin.R
 import org.futo.inputmethod.latin.common.Constants
 import org.futo.inputmethod.latin.uix.DynamicThemeProvider
 import org.futo.inputmethod.latin.uix.actions.throwIfDebug
+import kotlin.math.abs
 import kotlin.math.floor
 import kotlin.math.roundToInt
 
@@ -484,8 +488,171 @@ data class LayoutEngine(
         result = processRowSpan(result)
         result = mirrorForOneHanded(result)
         result = alignForSplitLayout(result)
+        result = hexGridPass(result)
 
         return result
+    }
+
+    // ---------------------------------------------------------------------------------------------
+    // Hexboard modification: hexagonal grid
+    //
+    // Hexagons only interlock when every row is shifted half a cell sideways from the rows above
+    // and below it. This pass takes the rows the normal engine produced, whatever their key counts,
+    // snaps every key to a whole number of grid cells and then picks a sideways offset for each row
+    // so that the half-cell shift always holds. Keys that can stretch (space, shift, delete, ...)
+    // absorb the cells that are left over; anything still left becomes empty space at the row ends.
+    // ---------------------------------------------------------------------------------------------
+
+    /** Width of one grid cell in pixels after [hexGridPass], or 0 if the pass did not apply. */
+    private var hexUnitPx = 0.0f
+
+    private val hexEnabled: Boolean = run {
+        val kind = layoutParams.element.kind
+        val kindOk = kind == KeyboardLayoutKind.Alphabet0 || kind == KeyboardLayoutKind.Alphabet1 ||
+                kind == KeyboardLayoutKind.Alphabet2 || kind == KeyboardLayoutKind.Alphabet3 ||
+                kind == KeyboardLayoutKind.Symbols
+        kindOk && !isSplitLayout && try {
+            context.getSettingBlocking(HexKeysSetting)
+        } catch (_: Exception) {
+            true
+        }
+    }
+
+    private class HexRow(val keys: List<LayoutEntry.Key>, val cells: IntArray, val grow: List<Int>, val flex: List<Int>) {
+        val minCells = cells.sum()
+        val canStretch = grow.isNotEmpty() || flex.isNotEmpty()
+    }
+
+    private class HexPlan(val total: Float, val cells: List<Int>, val offsets: List<Float>, val cost: Float)
+
+    /**
+     * Tries to place every row on a grid [total] cells wide. [firstParity] is 0 when the first row
+     * starts on a whole cell and 1 when it starts on a half cell; the following rows alternate.
+     */
+    private fun hexPlan(hexRows: List<HexRow>, total: Float, firstParity: Int): HexPlan? {
+        val outCells = ArrayList<Int>()
+        val outOffsets = ArrayList<Float>()
+        var cost = 0.0f
+        var parity = firstParity
+
+        for (r in hexRows) {
+            if (r.keys.isEmpty()) {
+                outCells.add(0)
+                outOffsets.add(0.0f)
+                continue
+            }
+
+            val want = parity * 0.5f
+            var n = if (r.canStretch) maxOf(r.minCells, floor(total + 0.001f).toInt()) else r.minCells
+            var offset = -1.0f
+            while (offset < 0.0f) {
+                val slack = total - n
+                if (slack < -0.001f) return null
+                if (want <= slack + 0.001f) {
+                    // Of the offsets with the right parity, take the one nearest to centred.
+                    var k = maxOf(0, Math.round(slack / 2.0f - want))
+                    while (k > 0 && want + k > slack + 0.001f) k--
+                    offset = want + k
+                } else if (r.canStretch && n > r.minCells) {
+                    n--
+                } else {
+                    return null
+                }
+            }
+
+            cost += abs(offset - (total - n) / 2.0f)
+            outCells.add(n)
+            outOffsets.add(offset)
+            parity = 1 - parity
+        }
+
+        return HexPlan(total, outCells, outOffsets, cost)
+    }
+
+    private fun hexGridPass(rows: List<LayoutRow>): List<LayoutRow> {
+        hexUnitPx = 0.0f
+        if (!hexEnabled || rows.isEmpty()) return rows
+
+        val width = layoutWidth.toFloat()
+        val baseUnit = regularKeyWidth + EPS
+        if (baseUnit < 4.0f || width < baseUnit) return rows
+
+        // Keys spanning several rows do not fit a hexagonal grid; leave such layouts alone.
+        if (rows.any { row -> row.entries.any { it is LayoutEntry.Key && (it.rowSpan > 1 || it.heightOverride != null) } }) {
+            return rows
+        }
+
+        val hexRows = rows.map { row ->
+            val keys = row.entries.filterIsInstance<LayoutEntry.Key>()
+            val cells = IntArray(keys.size) { i ->
+                val key = keys[i]
+                when (key.data.width) {
+                    KeyWidth.Regular, KeyWidth.Grow -> 1
+                    else -> maxOf(1, floor(key.widthPx / baseUnit + 0.25f).toInt())
+                }
+            }
+            HexRow(
+                keys = keys,
+                cells = cells,
+                grow = keys.indices.filter { keys[it].data.width == KeyWidth.Grow },
+                flex = keys.indices.filter { keys[it].data.width == KeyWidth.FunctionalKey }
+            )
+        }
+
+        val widest = hexRows.maxOf { it.minCells }
+        if (widest <= 0) return rows
+
+        // Prefer a grid exactly as wide as the widest row. If two full rows sit next to each other
+        // that cannot work, so add half a cell, which lets full rows alternate left and right.
+        val plans = listOfNotNull(hexPlan(hexRows, widest.toFloat(), 0), hexPlan(hexRows, widest.toFloat(), 1))
+            .ifEmpty { listOfNotNull(hexPlan(hexRows, widest + 0.5f, 0), hexPlan(hexRows, widest + 0.5f, 1)) }
+        val plan = plans.minByOrNull { it.cost } ?: return rows
+
+        val unit = width / plan.total
+        hexUnitPx = unit
+
+        return rows.mapIndexed { i, row ->
+            val r = hexRows[i]
+            if (r.keys.isEmpty()) return@mapIndexed row
+
+            val cells = r.cells.copyOf()
+            var extra = plan.cells[i] - r.minCells
+            if (extra > 0) {
+                // Growing keys (the space bar) take spare cells first. Otherwise the functional keys
+                // do, starting with the last one in the row, then the first, and so on.
+                val takers = if (r.grow.isNotEmpty()) r.grow else {
+                    val order = ArrayList<Int>()
+                    var lo = 0
+                    var hi = r.flex.size - 1
+                    while (lo <= hi) {
+                        order.add(r.flex[hi])
+                        if (lo != hi) order.add(r.flex[lo])
+                        lo++
+                        hi--
+                    }
+                    order
+                }
+                var j = 0
+                while (extra > 0 && takers.isNotEmpty()) {
+                    cells[takers[j % takers.size]]++
+                    j++
+                    extra--
+                }
+            }
+
+            val usedCells = cells.sum()
+            val lead = plan.offsets[i] * unit
+            val trail = width - lead - usedCells * unit
+
+            val entries = ArrayList<LayoutEntry>()
+            if (lead > 0.5f) entries.add(LayoutEntry.Gap(lead))
+            r.keys.forEachIndexed { k, key ->
+                entries.add(LayoutEntry.Key(key.data, cells[k] * unit, key.rowSpan, key.heightOverride))
+            }
+            if (trail > 0.5f) entries.add(LayoutEntry.Gap(trail))
+
+            row.copy(entries = entries)
+        }
     }
 
     private fun processRowSpan(rows: List<LayoutRow>): List<LayoutRow> {
@@ -816,6 +983,12 @@ data class LayoutEngine(
         params.removeRedundantMoreKeys()
 
         params.mMostCommonKeyWidth = regularKeyWidth.roundToInt()
+
+        // Hexboard modification: tell the view whether (and how wide) the hexagonal grid is.
+        params.mHexUnit = hexUnitPx
+        if (hexUnitPx > 0.0f) {
+            params.mMostCommonKeyWidth = hexUnitPx.roundToInt()
+        }
 
         return org.futo.inputmethod.keyboard.Keyboard(params)
     }

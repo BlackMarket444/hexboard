@@ -84,6 +84,9 @@ public class KeyboardParams {
     public int mMostCommonKeyHeight = 0;
     public int mMostCommonKeyWidth = 0;
 
+    // Hexboard modification: width in pixels of one cell of the hexagonal grid, 0 when not hexagonal.
+    public float mHexUnit = 0.0f;
+
     public boolean mProximityCharsCorrectionEnabled;
     public boolean mAutoShift;
 
