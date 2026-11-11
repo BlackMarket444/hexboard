@@ -211,11 +211,12 @@ public class KeyboardView extends View {
      */
     public void setKeyboard(@Nonnull final Keyboard keyboard) {
         mKeyboard = keyboard;
-        // Hexboard modification: layouts whose file name starts with "hex" stagger every row by
-        // half a key, so their keys can be drawn as interlocking hexagons.
+        // Hexboard modification: hex layouts (see HexLayouts) stagger every row by half a key,
+        // so their keys can be drawn as interlocking hexagons.
         final String layoutName = keyboard.mId == null ? null : keyboard.mId.mKeyboardLayoutSetName;
-        mHexMode = layoutName != null && layoutName.startsWith("hex")
-                && keyboard.mId.isAlphabetKeyboard() && !(keyboard instanceof MoreKeysKeyboard);
+        mHexMode = layoutName != null && keyboard.mId.isAlphabetKeyboard()
+                && !(keyboard instanceof MoreKeysKeyboard)
+                && HexLayouts.isHexLayout(getContext(), layoutName);
         mHexOverhang = 0.0f;
         mHexScale = 1.0f;
         mHexMinTop = 0;
