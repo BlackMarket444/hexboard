@@ -49,7 +49,7 @@ rows:
   - bottom:
       - { type: gap, attributes: { width: Custom3 } }
       - { type: symbols, attributes: { width: Custom1 } }
-      - { type: contextual, fallbackKey: ",", attributes: { width: Custom1 } }
+      - { type: contextual, attributes: { width: Custom1 }, fallbackKey: { type: base, spec: ",", attributes: { width: Custom1 } } }
       - { type: action, attributes: { width: Custom1 }, fallbackKey: { type: gap, attributes: { width: Custom1 } } }
       - { type: space, attributes: { width: Custom2 } }
       - { type: base, spec: ".", attributes: { width: Custom1 } }

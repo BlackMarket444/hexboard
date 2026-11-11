@@ -419,7 +419,12 @@ public class KeyboardView extends View {
         }
 
         if(Color.alpha(kdc.getTextColor()) > 0) {
+            // Hexboard modification: the hexagon is centred on the key's whole cell (key plus the
+            // gap below it), so move the label down to the same centre.
+            final float hexLabelShift = mHexMode ? key.getVerticalGap() / 2.0f : 0.0f;
+            canvas.translate(0.0f, hexLabelShift);
             onDrawKeyTopVisuals(key, canvas, paint, params, kdc, drawOffsetAndSize.right, drawOffsetAndSize.bottom);
+            canvas.translate(0.0f, -hexLabelShift);
         }
 
         canvas.translate(-drawOffsetAndSize.left, -drawOffsetAndSize.top);
@@ -538,10 +543,15 @@ public class KeyboardView extends View {
 
         float keyHintPaddingX = mKeyHintLetterPadding;
         float keyHintPaddingY = mKeyHintLetterPadding;
+        // Hexboard modification: a hexagon has no top-right corner, so pull the hint inwards.
+        final float hexHintInsetX = mHexMode ? keyWidth * 0.14f : 0.0f;
+        final float hexHintInsetY = mHexMode ? getResources().getDisplayMetrics().density * 1.5f : 0.0f;
         if((bgPadding.left | bgPadding.right | bgPadding.top | bgPadding.bottom) != 0) {
             keyHintPaddingX = bgPadding.right;
             keyHintPaddingY = bgPadding.top;
         }
+        keyHintPaddingX += hexHintInsetX;
+        keyHintPaddingY += hexHintInsetY;
 
         if (label != null && icon == null) {
             paint.setTypeface(kdc.getTextTypeface());
