@@ -1,0 +1,73 @@
+name: Build Hexboard APK
+
+on:
+  push:
+    branches: [hex]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: hexboard-build
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - name: Check out code and submodules
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+          lfs: true
+
+      - name: Fetch large files in submodules
+        run: |
+          git lfs install
+          git submodule foreach --recursive 'git lfs pull || true'
+          du -sh java/assets/* libs voiceinput-shared/src/main/ml || true
+
+      - name: Add Hexboard layouts
+        run: python3 hexboard-layouts/install.py java/assets/layouts
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Install Android NDK and CMake
+        run: |
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "ndk;28.2.13676358" "cmake;3.22.1" "platforms;android-35" "build-tools;35.0.0"
+
+      - name: Build
+        env:
+          BRANCH_NAME: hex
+        run: |
+          export VERSION_CODE="$(git rev-list --count HEAD)"
+          export VERSION_NAME="hexboard-${VERSION_CODE}"
+          echo "VERSION_NAME=$VERSION_NAME" >> "$GITHUB_ENV"
+          chmod +x gradlew
+          ./gradlew assembleUnstableRelease -s --no-daemon -Dorg.gradle.jvmargs="-Xmx6g -Dfile.encoding=UTF-8"
+          find build/outputs/apk -name '*.apk' -exec ls -la {} \;
+          cp build/outputs/apk/unstable/release/*.apk "Hexboard-FUTO-${VERSION_NAME}.apk"
+
+      - name: Upload APK as build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: hexboard-apk
+          path: Hexboard-FUTO-*.apk
+
+      - name: Publish APK as a release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete hexboard-latest --yes --cleanup-tag || true
+          gh release create hexboard-latest Hexboard-FUTO-*.apk \
+            --target "$GITHUB_SHA" \
+            --title "Hexboard build ${VERSION_NAME}" \
+            --notes "Personal modified build of FUTO Keyboard with hexagonal keys. Not made or supported by FUTO."

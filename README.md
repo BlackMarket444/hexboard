@@ -1,3 +1,9 @@
+> **Modified copy.** This repository is a personal, non-commercial modification of FUTO Keyboard
+> ("Hexboard"). It is not made, endorsed or supported by FUTO. Changes from the original: keys can
+> be drawn as interlocking hexagons, extra layouts live in `hexboard-layouts/`, and a GitHub Actions
+> build was added. Everything else, including FUTO's payment features and license, is unchanged.
+> The original project is at https://github.com/futo-org/android-keyboard.
+
 # FUTO Keyboard
 
 The goal is to make a good modern keyboard that stays offline and doesn't spy on you. This keyboard is a fork of [LatinIME, The Android Open-Source Keyboard](https://android.googlesource.com/platform/packages/inputmethods/LatinIME), with significant changes made to it.

@@ -1,0 +1,56 @@
+name: Hex Big QWERTY
+description: QWERTY order on four rows of seven larger hexagonal keys. Rare letters sit on the top row.
+numberRowMode: AlwaysDisabled
+rowHeightMode: FillHeight
+bottomRowHeightMode: Flexible
+bottomRowWidthMode: Identical
+supportsSplit: false
+minimumFunctionalKeyWidth: 0.1
+minimumBottomRowFunctionalKeyWidth: 0.1
+overrideWidths: { Custom1: 0.13333, Custom2: 0.26666, Custom3: 0.06666 }
+attributes: { width: Custom1, moreKeyMode: OnlyFromLetter }
+rows:
+  - letters:
+      - { type: gap, attributes: { width: Custom3 } }
+      - [q, "1"]
+      - z
+      - x
+      - [y, "6"]
+      - j
+      - k
+      - [p, "0"]
+  - letters:
+      - [w, "2"]
+      - [e, "3"]
+      - [r, "4"]
+      - [t, "5"]
+      - [u, "7"]
+      - [i, "8"]
+      - [o, "9"]
+      - { type: gap, attributes: { width: Custom3 } }
+  - letters:
+      - { type: gap, attributes: { width: Custom3 } }
+      - a
+      - s
+      - d
+      - f
+      - g
+      - h
+      - l
+  - letters:
+      - { type: shift, attributes: { width: Custom1 } }
+      - c
+      - v
+      - b
+      - n
+      - m
+      - { type: delete, attributes: { width: Custom1 } }
+      - { type: gap, attributes: { width: Custom3 } }
+  - bottom:
+      - { type: gap, attributes: { width: Custom3 } }
+      - { type: symbols, attributes: { width: Custom1 } }
+      - { type: contextual, fallbackKey: ",", attributes: { width: Custom1 } }
+      - { type: action, attributes: { width: Custom1 }, fallbackKey: { type: gap, attributes: { width: Custom1 } } }
+      - { type: space, attributes: { width: Custom2 } }
+      - { type: base, spec: ".", attributes: { width: Custom1 } }
+      - { type: enter, attributes: { width: Custom1 } }

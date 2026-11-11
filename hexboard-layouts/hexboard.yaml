@@ -1,0 +1,21 @@
+name: Hexboard
+description: Letters placed by letter-pair frequency to cut thumb travel. Drawn with hexagonal keys.
+numberRowMode: AlwaysDisabled
+rowHeightMode: FillHeight
+bottomRowHeightMode: Flexible
+bottomRowWidthMode: Identical
+supportsSplit: false
+minimumFunctionalKeyWidth: 0.1
+minimumBottomRowFunctionalKeyWidth: 0.1
+overrideWidths: { Custom1: 0.1, Custom2: 0.4 }
+rows:
+  - letters: "& q y f l i n d g j"
+  - letters: "z b u o s t a w k"
+  - letters: "$shift x p m r e h c v $delete"
+  - bottom:
+      - { type: symbols, attributes: { width: Custom1 } }
+      - { type: contextual, fallbackKey: ",", attributes: { width: Custom1 } }
+      - { type: action, attributes: { width: Custom1 }, fallbackKey: { type: gap, attributes: { width: Custom1 } } }
+      - { type: space, attributes: { width: Custom2 } }
+      - { type: base, spec: ".", attributes: { width: Custom1 } }
+      - { type: enter, attributes: { width: Custom1 } }

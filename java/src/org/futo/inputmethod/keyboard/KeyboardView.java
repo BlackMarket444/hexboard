@@ -22,11 +22,15 @@ import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
+import android.graphics.CornerPathEffect;
 import android.graphics.Paint.Align;
+import android.graphics.Path;
 import android.graphics.PorterDuff;
 import android.graphics.Rect;
 import android.graphics.RectF;
+import android.content.res.ColorStateList;
 import android.graphics.drawable.Drawable;
+import android.graphics.drawable.GradientDrawable;
 import android.graphics.drawable.NinePatchDrawable;
 import android.os.Build;
 import android.text.TextUtils;
@@ -207,6 +211,11 @@ public class KeyboardView extends View {
      */
     public void setKeyboard(@Nonnull final Keyboard keyboard) {
         mKeyboard = keyboard;
+        // Hexboard modification: layouts whose file name starts with "hex" stagger every row by
+        // half a key, so their keys can be drawn as interlocking hexagons.
+        final String layoutName = keyboard.mId == null ? null : keyboard.mId.mKeyboardLayoutSetName;
+        mHexMode = layoutName != null && layoutName.startsWith("hex")
+                && keyboard.mId.isAlphabetKeyboard() && !(keyboard instanceof MoreKeysKeyboard);
         final int keyHeight = keyboard.mMostCommonKeyHeight - keyboard.mVerticalGap;
         final int keyWidth = keyboard.mMostCommonKeyWidth;
 
@@ -400,7 +409,13 @@ public class KeyboardView extends View {
 
         final Drawable background = kdc.getBackground();
         if (background != null) {
-            onDrawKeyBackground(key, canvas, background, drawOffsetAndSize.right, drawOffsetAndSize.bottom);
+            if (mHexMode) {
+                canvas.translate(-drawOffsetAndSize.left, -drawOffsetAndSize.top);
+                drawHexKeyBackground(key, canvas, background);
+                canvas.translate(drawOffsetAndSize.left, drawOffsetAndSize.top);
+            } else {
+                onDrawKeyBackground(key, canvas, background, drawOffsetAndSize.right, drawOffsetAndSize.bottom);
+            }
         }
 
         if(Color.alpha(kdc.getTextColor()) > 0) {
@@ -408,6 +423,72 @@ public class KeyboardView extends View {
         }
 
         canvas.translate(-drawOffsetAndSize.left, -drawOffsetAndSize.top);
+    }
+
+    // Hexboard modification: hexagonal key backgrounds.
+    private boolean mHexMode = false;
+    private final Path mHexPath = new Path();
+    private final Paint mHexPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+
+    /**
+     * Draws the key's background as a pointy-top hexagon that fills the key's whole cell and
+     * reaches a little into the rows above and below, where the neighbouring rows (offset by half
+     * a key) leave room for it. A key several cells wide becomes a row of joined hexagons.
+     */
+    private void drawHexKeyBackground(@Nonnull final Key key, @Nonnull final Canvas canvas,
+            @Nonnull final Drawable background) {
+        final float density = getResources().getDisplayMetrics().density;
+        final float cellW = key.getWidth() + key.getHorizontalGap();
+        final float cellH = key.getHeight() + key.getVerticalGap();
+        final float left = key.getX() + getPaddingLeft();
+        final float top = key.getY() + getPaddingTop();
+        final float common = Math.max(1, mKeyboard.mMostCommonKeyWidth);
+        final int cells = Math.max(1, Math.round(cellW / common));
+        final float unit = cellW / cells;
+        // Vertical reach of the slanted edges for 120 degree corners: unit / (4 * sqrt(3)).
+        final float o = unit * 0.1443f;
+        final float inset = Math.max(1.0f, density * 1.25f);
+        final float w = unit / 2.0f - inset;
+        final float yTopTip = top - o + inset * 1.15f;
+        final float yTopSide = top + o + inset * 0.58f;
+        final float yBottomSide = top + cellH - o - inset * 0.58f;
+        final float yBottomTip = top + cellH + o - inset * 1.15f;
+        final float firstCenter = left + unit / 2.0f;
+
+        final Path path = mHexPath;
+        path.rewind();
+        path.moveTo(firstCenter - w, yTopSide);
+        for (int i = 0; i < cells; i++) {
+            final float c = firstCenter + i * unit;
+            path.lineTo(c, yTopTip);
+            path.lineTo(c + w, yTopSide);
+            if (i < cells - 1) path.lineTo(c + unit - w, yTopSide);
+        }
+        path.lineTo(firstCenter + (cells - 1) * unit + w, yBottomSide);
+        for (int i = cells - 1; i >= 0; i--) {
+            final float c = firstCenter + i * unit;
+            path.lineTo(c, yBottomTip);
+            path.lineTo(c - w, yBottomSide);
+            if (i > 0) path.lineTo(c - unit + w, yBottomSide);
+        }
+        path.close();
+
+        final ColorStateList color = (background instanceof GradientDrawable)
+                ? ((GradientDrawable) background).getColor() : null;
+        if (color != null) {
+            mHexPaint.setStyle(Paint.Style.FILL);
+            mHexPaint.setPathEffect(new CornerPathEffect(density * 4.0f));
+            mHexPaint.setColor(color.getDefaultColor());
+            canvas.drawPath(path, mHexPaint);
+        } else {
+            // Themes with image or layered backgrounds: draw the theme's own drawable, cut to shape.
+            canvas.save();
+            canvas.clipPath(path);
+            background.setBounds(Math.round(left), Math.round(top - o),
+                    Math.round(left + cellW), Math.round(top + cellH + o));
+            background.draw(canvas);
+            canvas.restore();
+        }
     }
 
     // Draw key background.
