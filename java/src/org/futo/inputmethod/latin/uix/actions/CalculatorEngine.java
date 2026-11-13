@@ -52,7 +52,12 @@ public final class CalculatorEngine {
 
     /** A result as text: at most 12 significant digits, no trailing zeros. */
     public static String format(final BigDecimal value) {
-        BigDecimal v = value.round(new MathContext(12, RoundingMode.HALF_UP));
+        return format(value, 12);
+    }
+
+    /** A result as text with at most [digits] significant digits and no trailing zeros. */
+    public static String format(final BigDecimal value, final int digits) {
+        BigDecimal v = value.round(new MathContext(digits, RoundingMode.HALF_UP));
         if (v.signum() == 0) return "0";
         v = v.stripTrailingZeros();
         final int digitsBeforePoint = v.precision() - v.scale();

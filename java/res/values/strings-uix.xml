@@ -10,6 +10,8 @@
     <string name="action_redo_title">Redo</string>
     <string name="action_text_editor_title">Text Editor</string>
     <string name="action_calculator_title" translatable="false">Calculator</string>
+    <string name="action_notepad_title" translatable="false">Notepad</string>
+    <string name="action_unit_converter_title" translatable="false">Unit converter</string>
     <string name="action_debug_title">Debug Info</string>
     <string name="action_more_actions_title">All Actions</string>
     <string name="action_bug_viewer_title">Bug Viewer</string>

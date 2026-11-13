@@ -44,6 +44,8 @@ val AllActionsMap = mapOf(
     "right" to ArrowRightAction,
     "font_typer" to FontTyperAction,
     "calculator" to CalculatorAction, // Hexboard modification
+    "notepad" to NotepadAction, // Hexboard modification
+    "unit_converter" to UnitConverterAction, // Hexboard modification
 )
 
 val ActionToId = AllActionsMap.entries.associate { it.value to it.key }

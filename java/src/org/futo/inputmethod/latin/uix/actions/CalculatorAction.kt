@@ -61,7 +61,7 @@ private val CalculatorKeys = listOf(
 )
 
 /** Pointy-top hexagon filling its bounds, matching the hexagonal keyboard keys. */
-private val HexagonShape = GenericShape { size, _ ->
+internal val HexagonShape = GenericShape { size, _ ->
     moveTo(size.width / 2f, 0f)
     lineTo(size.width, size.height * 0.25f)
     lineTo(size.width, size.height * 0.75f)
@@ -134,7 +134,7 @@ private fun backspace() {
 }
 
 @Composable
-private fun CalculatorButton(
+internal fun CalculatorButton(
     label: String,
     modifier: Modifier,
     shape: Shape,
